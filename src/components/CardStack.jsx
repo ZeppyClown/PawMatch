@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import SwipeCard from './SwipeCard.jsx';
+import AnimalDetailModal from './AnimalDetailModal.jsx';
 
 const SG_SPECIAL_FACTS = [
   "Singapore Specials are mixed-breed dogs rescued from our local streets and kampungs. They're resilient, street-smart, and deeply loyal.",
@@ -49,6 +50,7 @@ export default function CardStack({ animals, onSwipeRight, onSwipeLeft }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeCount, setSwipeCount] = useState(0);
   const [showSgCard, setShowSgCard] = useState(false);
+  const [detailAnimal, setDetailAnimal] = useState(null);
   const topCardRef = useRef(null);
 
   const visibleAnimals = animals.slice(currentIndex, currentIndex + 3);
@@ -110,6 +112,7 @@ export default function CardStack({ animals, onSwipeRight, onSwipeLeft }) {
               isTop={isTop && !showSgCard}
               behindIndex={behindIndex}
               onSwipe={(dir) => handleCardSwipe(dir, animal)}
+              onTap={isTop && !showSgCard ? () => setDetailAnimal(animal) : undefined}
             />
           );
         })}
@@ -159,8 +162,16 @@ export default function CardStack({ animals, onSwipeRight, onSwipeLeft }) {
 
       {/* ── Hint ── */}
       <p className="text-center text-[11px] text-gray-400 font-semibold pb-1">
-        Swipe right to adopt · Swipe left to pass
+        Tap card for details · Swipe right to adopt · Swipe left to pass
       </p>
+
+      {/* ── Animal detail modal (tap to view) ── */}
+      {detailAnimal && (
+        <AnimalDetailModal
+          animal={detailAnimal}
+          onClose={() => setDetailAnimal(null)}
+        />
+      )}
     </div>
   );
 }

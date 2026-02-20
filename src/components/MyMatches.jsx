@@ -88,6 +88,16 @@ function MatchCard({ animal, index, onTap }) {
             alt={animal.name}
             className="w-24 h-full object-cover"
             style={{ minHeight: 110 }}
+            onError={(e) => {
+              e.target.onerror = null;
+              if (animal.species === 'cat') {
+                e.target.src = 'https://placekitten.com/200/200';
+              } else if (animal.species === 'rabbit') {
+                e.target.src = 'https://picsum.photos/seed/rabbit/200/200';
+              } else {
+                e.target.src = `https://placedog.net/200/200?id=${animal.id}`;
+              }
+            }}
           />
           <div className="absolute top-2 left-2 text-sm drop-shadow">
             {speciesEmoji(animal.species)}

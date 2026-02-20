@@ -21,7 +21,7 @@ function EnergyDots({ level }) {
 }
 
 const SwipeCard = forwardRef(function SwipeCard(
-  { animal, isTop, behindIndex = 0, onSwipe },
+  { animal, isTop, behindIndex = 0, onSwipe, onTap },
   ref,
 ) {
   // ── Drag state (ref for values, state for display trigger) ─────────────────
@@ -57,7 +57,14 @@ const SwipeCard = forwardRef(function SwipeCard(
   const onPointerEnd = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
-    const { x } = dragRef.current;
+    const { x, y } = dragRef.current;
+
+    // Treat as a tap if barely moved — show detail view
+    if (Math.abs(x) < 10 && Math.abs(y) < 15) {
+      setDragDisplay({ x: 0, y: 0, active: false });
+      onTap?.();
+      return;
+    }
 
     if (x > SWIPE_THRESHOLD) {
       setExitDir('right');
@@ -120,7 +127,14 @@ const SwipeCard = forwardRef(function SwipeCard(
             className="w-full h-full object-cover"
             draggable={false}
             onError={(e) => {
-              e.target.src = `https://placedog.net/500/600?id=${animal.id}`;
+              e.target.onerror = null;
+              if (animal.species === 'cat') {
+                e.target.src = `https://placekitten.com/500/600`;
+              } else if (animal.species === 'rabbit') {
+                e.target.src = `https://picsum.photos/seed/rabbit/500/600`;
+              } else {
+                e.target.src = `https://placedog.net/500/600?id=${animal.id}`;
+              }
             }}
           />
           {/* Top gradient */}

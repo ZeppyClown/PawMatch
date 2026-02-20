@@ -67,6 +67,16 @@ export default function AnimalDetailModal({ animal, onClose }) {
               src={animal.photo}
               alt={animal.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                if (animal.species === 'cat') {
+                  e.target.src = 'https://placekitten.com/500/400';
+                } else if (animal.species === 'rabbit') {
+                  e.target.src = 'https://picsum.photos/seed/rabbit/500/400';
+                } else {
+                  e.target.src = `https://placedog.net/500/400?id=${animal.id}`;
+                }
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
