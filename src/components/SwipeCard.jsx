@@ -5,7 +5,7 @@ const SWIPE_THRESHOLD = 90; // px
 function EnergyDots({ level }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs font-bold text-gray-400">Energy</span>
+      <span className="text-xs font-bold text-gray-500">Energy</span>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map(i => (
           <div
@@ -113,7 +113,7 @@ const SwipeCard = forwardRef(function SwipeCard(
       <div className="w-full h-full bg-white rounded-[28px] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
 
         {/* ── Photo ── */}
-        <div className="relative" style={{ height: '62%' }}>
+        <div className="relative" style={{ height: '58%' }}>
           <img
             src={animal.photo}
             alt={animal.name}
@@ -146,22 +146,36 @@ const SwipeCard = forwardRef(function SwipeCard(
         </div>
 
         {/* ── Info panel ── */}
-        <div className="flex flex-col justify-between px-5 py-4" style={{ height: '38%' }}>
+        <div className="flex flex-col justify-between px-5 py-3.5" style={{ height: '42%' }}>
           <div>
-            <div className="flex items-start justify-between gap-2 mb-1.5">
+            <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
                 <h2 className="font-display text-xl font-bold text-gray-900 leading-tight">
                   {animal.name}, {animal.age}
                 </h2>
-                <p className="text-gray-400 text-xs font-semibold">{animal.breed}</p>
+                <p className="text-gray-600 text-xs font-semibold mt-0.5">{animal.breed}</p>
               </div>
               <span className="flex-shrink-0 bg-orange-50 border border-orange-200 text-[#FF6B35] px-2.5 py-1 rounded-full text-[11px] font-bold text-center leading-tight max-w-[130px]">
                 {animal.personalityTag}
               </span>
             </div>
-            <EnergyDots level={animal.energyLevel} />
+
+            <div className="flex items-center gap-2 mb-2">
+              <EnergyDots level={animal.energyLevel} />
+              {/* HDB badge */}
+              {animal.hdbApproved !== undefined && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  animal.hdbApproved
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {animal.hdbApproved ? '✓ HDB' : 'Private only'}
+                </span>
+              )}
+            </div>
           </div>
-          <p className="text-[13px] text-gray-500 leading-snug line-clamp-2">
+
+          <p className="text-[13px] text-gray-700 leading-snug line-clamp-2">
             {animal.bio}
           </p>
         </div>

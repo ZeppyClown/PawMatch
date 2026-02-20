@@ -50,11 +50,12 @@ const QUESTIONS = [
   {
     id: 6,
     question: 'Where do you live?',
-    subtitle: 'Your space shapes your pet\'s world.',
+    subtitle: 'HDB rules affect which pets you can keep.',
+    hdbNote: 'HDB only allows specific small dog breeds. We\'ll filter your matches so you only see pets you can legally own.',
     options: [
-      { label: 'House with yard', value: 'house_yard', emoji: '🏡', desc: 'Plenty of outdoor space to run and play' },
-      { label: 'Apartment', value: 'apartment', emoji: '🏢', desc: 'Cozy and compact — parks are nearby' },
-      { label: 'Large home, no yard', value: 'house_no_yard', emoji: '🏠', desc: 'Lots of indoor space, outdoor access nearby' },
+      { label: 'HDB Flat', value: 'hdb', emoji: '🏢', desc: 'Only HDB-approved breeds allowed — we\'ll filter for you' },
+      { label: 'Private Condo', value: 'condo', emoji: '🏙️', desc: 'Most pets welcome, subject to condo rules' },
+      { label: 'Landed Property', value: 'landed', emoji: '🏡', desc: 'Plenty of space for dogs of any size' },
     ],
   },
   {
@@ -132,7 +133,7 @@ export default function Onboarding({ onComplete }) {
         <div className="text-center animate-fade-scale-in">
           <div className="text-8xl mb-6 animate-pulse-ring inline-block rounded-full">🐾</div>
           <h1 className="font-display text-5xl font-bold text-[#FF6B35] mb-3">PawMatch</h1>
-          <p className="text-gray-500 text-lg font-semibold mb-2">Find your perfect companion</p>
+          <p className="text-gray-500 text-lg font-semibold mb-2">Every Singapore animal deserves a second chance</p>
           <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">
             Answer 8 quick questions and we'll use your personality type to match you with animals who truly complement you.
           </p>
@@ -217,6 +218,14 @@ export default function Onboarding({ onComplete }) {
             );
           })}
         </div>
+
+        {/* HDB info note (Q6 only) */}
+        {question.hdbNote && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+            <span className="text-lg flex-shrink-0 mt-0.5">🏢</span>
+            <p className="text-xs text-green-800 leading-snug font-semibold">{question.hdbNote}</p>
+          </div>
+        )}
 
         {/* Next button */}
         <button

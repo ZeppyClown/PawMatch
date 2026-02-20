@@ -6,7 +6,6 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Slight delay so mount animation feels intentional
     const t = setTimeout(() => setVisible(true), 50);
     return () => clearTimeout(t);
   }, []);
@@ -17,6 +16,12 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
     score >= 80 ? '#4CAF78' :
     score >= 60 ? '#FF6B35' :
     '#94a3b8';
+
+  const handleContactShelter = () => {
+    if (animal.shelter?.url) {
+      window.open(animal.shelter.url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
     <>
@@ -33,7 +38,7 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
           className={`w-full max-w-[430px] bg-white rounded-t-[32px] overflow-hidden transition-all duration-500 ${
             visible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
           }`}
-          style={{ maxHeight: '90vh', overflowY: 'auto' }}
+          style={{ maxHeight: '92vh', overflowY: 'auto' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Pull handle */}
@@ -42,15 +47,15 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
           </div>
 
           {/* Animal photo */}
-          <div className="relative mx-5 mt-3 rounded-2xl overflow-hidden" style={{ height: 220 }}>
+          <div className="relative mx-5 mt-3 rounded-2xl overflow-hidden" style={{ height: 200 }}>
             <img
               src={animal.photo}
               alt={animal.name}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4">
-              <p className="text-white text-xs font-bold opacity-80 mb-1">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+            <div className="absolute bottom-3 left-4 right-4">
+              <p className="text-white text-xs font-bold opacity-90">
                 ⏰ {animal.daysInShelter} days in shelter
               </p>
             </div>
@@ -58,6 +63,7 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
 
           {/* Content */}
           <div className="px-6 pt-5 pb-8">
+
             {/* Score */}
             <div className="text-center mb-5 animate-pop-in">
               <div
@@ -80,7 +86,7 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
             </div>
 
             {/* Why compatible */}
-            <div className="bg-[#FFF8F0] rounded-2xl p-4 mb-5 animate-slide-up-fade">
+            <div className="bg-[#FFF8F0] rounded-2xl p-4 mb-4 animate-slide-up-fade">
               <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-3">
                 Why you're compatible
               </p>
@@ -93,7 +99,6 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
                 ))}
               </ul>
 
-              {/* Amber waiting note */}
               {waitingNote && (
                 <div className="mt-3 pt-3 border-t border-amber-200 flex items-start gap-2.5">
                   <span className="text-amber-500 text-lg leading-tight flex-shrink-0 mt-0.5">⏰</span>
@@ -103,13 +108,36 @@ export default function MatchModal({ animal, score, userProfile, onKeepSwiping, 
             </div>
 
             {/* Personality tag */}
-            <div className="flex items-center justify-center mb-5">
+            <div className="flex items-center justify-center mb-4">
               <span className="bg-orange-50 border border-orange-200 text-[#FF6B35] px-4 py-1.5 rounded-full text-sm font-bold">
                 {animal.personalityTag}
               </span>
             </div>
 
-            {/* CTA buttons */}
+            {/* Shelter CTA */}
+            {animal.shelter && (
+              <div className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-100">
+                <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wider mb-3">
+                  Ready to meet {animal.name}?
+                </p>
+                <button
+                  onClick={handleContactShelter}
+                  className="w-full py-3.5 rounded-xl font-bold text-sm bg-[#4CAF78] text-white shadow hover:bg-green-600 active:scale-95 transition-all duration-200 mb-2.5"
+                >
+                  Contact {animal.shelter.name} →
+                </button>
+                <p className="text-xs text-gray-400 text-center leading-snug">
+                  📍 {animal.shelter.address}
+                </p>
+                {animal.daysInShelter > 90 && (
+                  <p className="text-xs text-amber-600 font-bold text-center mt-2 leading-snug">
+                    ⏰ {animal.name} has been waiting {animal.daysInShelter} days. Please reach out today.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Navigation CTAs */}
             <div className="flex flex-col gap-3">
               <button
                 onClick={onKeepSwiping}

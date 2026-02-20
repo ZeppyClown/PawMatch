@@ -7,9 +7,13 @@ const activityLabels = {
 };
 
 const livingLabels = {
-  house_yard:    { label: 'House with Yard',       emoji: '🏡' },
-  apartment:     { label: 'Apartment',             emoji: '🏢' },
-  house_no_yard: { label: 'Large Home, No Yard',   emoji: '🏠' },
+  hdb:    { label: 'HDB Flat',          emoji: '🏢' },
+  condo:  { label: 'Private Condo',     emoji: '🏙️' },
+  landed: { label: 'Landed Property',   emoji: '🏡' },
+  // legacy values
+  house_yard:    { label: 'House with Yard',     emoji: '🏡' },
+  apartment:     { label: 'Apartment',           emoji: '🏢' },
+  house_no_yard: { label: 'Large Home, No Yard', emoji: '🏠' },
 };
 
 const timeLabels = {

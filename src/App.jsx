@@ -17,10 +17,19 @@ function load(key, fallback) {
   }
 }
 
+const SPECIES_FILTERS = [
+  { value: 'all', label: 'All',  emoji: '🐾' },
+  { value: 'dog', label: 'Dogs', emoji: '🐶' },
+  { value: 'cat', label: 'Cats', emoji: '🐱' },
+];
+
 export default function App() {
-  const [userProfile, setUserProfile] = useState(() => load('pawmatch_profile', null));
-  const [likedAnimals, setLikedAnimals] = useState(() => load('pawmatch_liked', []));
-  const [passedIds, setPassedIds] = useState(() => load('pawmatch_passed', []));
+  const [userProfile,  setUserProfile]  = useState(() => load('pawmatch_profile', null));
+  const [likedAnimals, setLikedAnimals] = useState(() => load('pawmatch_liked',   []));
+  const [passedIds,    setPassedIds]    = useState(() => load('pawmatch_passed',   []));
+  const [activeTab,    setActiveTab]    = useState('discover');
+  const [matchModal,   setMatchModal]   = useState(null);
+  const [speciesFilter, setSpeciesFilter] = useState('all');
 
   useEffect(() => {
     if (userProfile) localStorage.setItem('pawmatch_profile', JSON.stringify(userProfile));
@@ -28,22 +37,29 @@ export default function App() {
   }, [userProfile]);
 
   useEffect(() => {
-    localStorage.setItem('pawmatch_liked', JSON.stringify(likedAnimals));
+    localStorage.setItem('pawmatch_liked',  JSON.stringify(likedAnimals));
   }, [likedAnimals]);
 
   useEffect(() => {
     localStorage.setItem('pawmatch_passed', JSON.stringify(passedIds));
   }, [passedIds]);
-  const [activeTab, setActiveTab] = useState('discover');
-  const [matchModal, setMatchModal] = useState(null); // { animal, score }
 
-  // Compute available animals (sorted, unswiped)
-  const sortedAnimals = userProfile
-    ? sortAnimalsByScore(animalsData, userProfile)
-    : animalsData;
-
-  const swipedIds = new Set([...likedAnimals.map(a => a.id), ...passedIds]);
+  // Sort animals by compatibility, strip already-swiped ones
+  const sortedAnimals    = userProfile ? sortAnimalsByScore(animalsData, userProfile) : animalsData;
+  const swipedIds        = new Set([...likedAnimals.map(a => a.id), ...passedIds]);
   const availableAnimals = sortedAnimals.filter(a => !swipedIds.has(a.id));
+
+  // Apply HDB filter (HDB residents can only keep HDB-approved breeds)
+  const hdbFiltered =
+    userProfile?.livingSpace === 'hdb'
+      ? availableAnimals.filter(a => a.hdbApproved)
+      : availableAnimals;
+
+  // Apply species filter
+  const filteredAnimals =
+    speciesFilter === 'all'
+      ? hdbFiltered
+      : hdbFiltered.filter(a => a.species === speciesFilter);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleOnboardingComplete = (profile) => {
@@ -68,6 +84,7 @@ export default function App() {
     setPassedIds([]);
     setMatchModal(null);
     setActiveTab('discover');
+    setSpeciesFilter('all');
   };
 
   // ── Onboarding ─────────────────────────────────────────────────────────────
@@ -87,9 +104,9 @@ export default function App() {
             <h1 className="font-display text-xl font-bold text-[#FF6B35]">PawMatch</h1>
           </div>
           <div className="flex items-center gap-2">
-            {activeTab === 'discover' && availableAnimals.length > 0 && (
+            {activeTab === 'discover' && filteredAnimals.length > 0 && (
               <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
-                {availableAnimals.length} waiting
+                {filteredAnimals.length} waiting
               </span>
             )}
             {activeTab === 'matches' && likedAnimals.length > 0 && (
@@ -100,12 +117,31 @@ export default function App() {
           </div>
         </header>
 
-        {/* ── Tab title ── */}
-        <div className="flex-shrink-0 px-5 pt-3 pb-1">
+        {/* ── Tab title + species filter ── */}
+        <div className="flex-shrink-0 px-5 pt-3 pb-2">
           {activeTab === 'discover' && (
             <div>
               <h2 className="font-display text-lg font-bold text-gray-900">Find Your Match</h2>
-              <p className="text-xs text-gray-400 font-semibold">Sorted by compatibility · {userProfile.mbti} type</p>
+              <p className="text-xs text-gray-400 font-semibold mb-3">
+                Sorted by compatibility · {userProfile.mbti} type
+              </p>
+              {/* Species filter tabs */}
+              <div className="flex gap-1.5 bg-gray-100 p-1 rounded-2xl">
+                {SPECIES_FILTERS.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setSpeciesFilter(f.value)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                      speciesFilter === f.value
+                        ? 'bg-white text-[#FF6B35] shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <span>{f.emoji}</span>
+                    <span>{f.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {activeTab === 'matches' && (
@@ -126,7 +162,8 @@ export default function App() {
         <main className="flex-1 overflow-hidden flex flex-col">
           {activeTab === 'discover' && (
             <CardStack
-              animals={availableAnimals}
+              key={speciesFilter}
+              animals={filteredAnimals}
               onSwipeRight={handleSwipeRight}
               onSwipeLeft={handleSwipeLeft}
             />
