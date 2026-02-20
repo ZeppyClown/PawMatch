@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Onboarding from './components/Onboarding.jsx';
 import CardStack from './components/CardStack.jsx';
 import MyMatches from './components/MyMatches.jsx';
@@ -8,10 +8,32 @@ import MatchModal from './components/MatchModal.jsx';
 import animalsData from './data/animalsData.js';
 import { sortAnimalsByScore, computeMatchScore } from './utils/matchingAlgorithm.js';
 
+function load(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function App() {
-  const [userProfile, setUserProfile] = useState(null);
-  const [likedAnimals, setLikedAnimals] = useState([]);
-  const [passedIds, setPassedIds] = useState([]);
+  const [userProfile, setUserProfile] = useState(() => load('pawmatch_profile', null));
+  const [likedAnimals, setLikedAnimals] = useState(() => load('pawmatch_liked', []));
+  const [passedIds, setPassedIds] = useState(() => load('pawmatch_passed', []));
+
+  useEffect(() => {
+    if (userProfile) localStorage.setItem('pawmatch_profile', JSON.stringify(userProfile));
+    else localStorage.removeItem('pawmatch_profile');
+  }, [userProfile]);
+
+  useEffect(() => {
+    localStorage.setItem('pawmatch_liked', JSON.stringify(likedAnimals));
+  }, [likedAnimals]);
+
+  useEffect(() => {
+    localStorage.setItem('pawmatch_passed', JSON.stringify(passedIds));
+  }, [passedIds]);
   const [activeTab, setActiveTab] = useState('discover');
   const [matchModal, setMatchModal] = useState(null); // { animal, score }
 
