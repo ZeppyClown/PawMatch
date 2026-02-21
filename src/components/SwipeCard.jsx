@@ -115,7 +115,7 @@ const SwipeCard = forwardRef(function SwipeCard(
       onMouseLeave={dragDisplay.active ? onPointerEnd : undefined}
       onTouchStart={isTop ? (e) => onPointerStart(e.touches[0].clientX, e.touches[0].clientY) : undefined}
       onTouchMove={dragDisplay.active ? (e) => { e.preventDefault(); onPointerMove(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
-      onTouchEnd={dragDisplay.active ? onPointerEnd : undefined}
+      onTouchEnd={dragDisplay.active ? (e) => { e.preventDefault(); onPointerEnd(); } : undefined}
     >
       <div className="w-full h-full bg-white rounded-[28px] overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.12)]">
 

@@ -40,7 +40,7 @@ export default function MyMatches({ likedAnimals, onViewDiscover }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
-          {likedAnimals.map((animal, idx) => (
+          {[...likedAnimals].sort((a, b) => b.score - a.score).map((animal, idx) => (
             <MatchCard
               key={animal.id}
               animal={animal}
