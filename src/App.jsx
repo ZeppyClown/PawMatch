@@ -9,7 +9,10 @@ import CardStack from './components/CardStack.jsx';
 import MyMatches from './components/MyMatches.jsx';
 import Profile from './components/Profile.jsx';
 import BottomNav from './components/BottomNav.jsx';
+import BreedGuide from './components/BreedGuide.jsx';
 import MatchModal from './components/MatchModal.jsx';
+import OwnerOnboarding from './components/OwnerOnboarding.jsx';
+import Community from './components/Community.jsx';
 import animalsData from './data/animalsData.js';
 import { sortAnimalsByScore, computeMatchScore } from './utils/matchingAlgorithm.js';
 
@@ -38,12 +41,14 @@ function cacheClear(uid) {
 // ── Firestore helpers ────────────────────────────────────────────────────────
 async function loadUserData(uid) {
   const snap = await getDoc(doc(db, 'users', uid));
-  if (!snap.exists()) return { profile: null, likedAnimals: [], passedIds: [] };
+  if (!snap.exists()) return { profile: null, likedAnimals: [], passedIds: [], onboardingProgress: { completedTasks: [] }, joinedCommunities: [] };
   const data = snap.data();
   return {
-    profile:      data.profile      ?? null,
-    likedAnimals: data.likedAnimals ?? [],
-    passedIds:    data.passedIds    ?? [],
+    profile:             data.profile             ?? null,
+    likedAnimals:        data.likedAnimals        ?? [],
+    passedIds:           data.passedIds           ?? [],
+    onboardingProgress:  data.onboardingProgress  ?? { completedTasks: [] },
+    joinedCommunities:   data.joinedCommunities   ?? [],
   };
 }
 
@@ -82,10 +87,13 @@ export default function App() {
   const [userProfile,   setUserProfile]   = useState(null);
   const [likedAnimals,  setLikedAnimals]  = useState([]);
   const [passedIds,     setPassedIds]     = useState([]);
-  const [activeTab,     setActiveTab]     = useState('discover');
-  const [matchModal,    setMatchModal]    = useState(null);
-  const [speciesFilter, setSpeciesFilter] = useState('all');
-  const [dataLoading,   setDataLoading]   = useState(false);
+  const [activeTab,          setActiveTab]          = useState('discover');
+  const [matchModal,         setMatchModal]         = useState(null);
+  const [speciesFilter,      setSpeciesFilter]      = useState('all');
+  const [dataLoading,        setDataLoading]        = useState(false);
+  const [showOnboarding,     setShowOnboarding]     = useState(false);
+  const [onboardingProgress, setOnboardingProgress] = useState({ completedTasks: [] });
+  const [joinedCommunities,  setJoinedCommunities]  = useState([]);
 
   // ── Load user data from Firestore on login ───────────────────────────────
   useEffect(() => {
@@ -107,10 +115,12 @@ export default function App() {
 
     setDataLoading(true);
     loadUserData(uid)
-      .then(({ profile, likedAnimals, passedIds }) => {
+      .then(({ profile, likedAnimals, passedIds, onboardingProgress, joinedCommunities }) => {
         setUserProfile(profile);
         setLikedAnimals(likedAnimals);
         setPassedIds(passedIds);
+        setOnboardingProgress(onboardingProgress);
+        setJoinedCommunities(joinedCommunities);
         cacheSave(uid, 'profile', profile);
         cacheSave(uid, 'liked',   likedAnimals);
         cacheSave(uid, 'passed',  passedIds);
@@ -140,6 +150,11 @@ export default function App() {
     savePassed(uid, passedIds).catch(console.error);
     cacheSave(uid, 'passed', passedIds);
   }, [passedIds]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!currentUser || dataLoading) return;
+    setDoc(doc(db, 'users', currentUser.uid), { joinedCommunities }, { merge: true }).catch(console.error);
+  }, [joinedCommunities]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filtered animals ─────────────────────────────────────────────────────
   const sortedAnimals    = userProfile ? sortAnimalsByScore(animalsData, userProfile) : animalsData;
@@ -300,6 +315,18 @@ export default function App() {
               </p>
             </div>
           )}
+          {activeTab === 'guide' && (
+            <div>
+              <h2 className="font-display text-lg font-bold text-gray-900">Breed Guide</h2>
+              <p className="text-xs text-gray-400 font-semibold">Singapore's dogs — HDB &amp; beyond</p>
+            </div>
+          )}
+          {activeTab === 'community' && (
+            <div>
+              <h2 className="font-display text-lg font-bold text-gray-900">Community</h2>
+              <p className="text-xs text-gray-400 font-semibold">Connect with Singapore dog owners</p>
+            </div>
+          )}
         </div>
 
         {/* ── Main content ── */}
@@ -322,6 +349,16 @@ export default function App() {
             <Profile
               userProfile={userProfile}
               onRetakeQuiz={handleRetakeQuiz}
+              onOpenGuide={() => setShowOnboarding(true)}
+              onboardingProgress={onboardingProgress}
+            />
+          )}
+          {activeTab === 'guide' && <BreedGuide />}
+          {activeTab === 'community' && (
+            <Community
+              userProfile={userProfile}
+              joinedCommunities={joinedCommunities}
+              onJoinedChange={setJoinedCommunities}
             />
           )}
         </main>
@@ -341,6 +378,11 @@ export default function App() {
               setActiveTab('matches');
             }}
           />
+        )}
+
+        {/* ── 30-Day Owner Onboarding overlay ── */}
+        {showOnboarding && (
+          <OwnerOnboarding onClose={() => setShowOnboarding(false)} />
         )}
       </div>
     </div>

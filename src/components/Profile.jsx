@@ -29,7 +29,7 @@ const expLabels = {
   very_experienced: { label: 'Very Experienced',    emoji: '🌳', color: '#FF6B35' },
 };
 
-export default function Profile({ userProfile, onRetakeQuiz }) {
+export default function Profile({ userProfile, onRetakeQuiz, onOpenGuide, onboardingProgress }) {
   const { logout, currentUser } = useAuth();
   const mbtiLabel = getMBTILabel(userProfile.mbti);
 
@@ -112,6 +112,37 @@ export default function Profile({ userProfile, onRetakeQuiz }) {
           {' '}{userProfile.mbti[3] === 'J' ? ' appreciate structure and routine' : ' enjoy spontaneity and flexibility'}.
         </p>
       </div>
+
+      {/* 30-Day Guide Card */}
+      {(() => {
+        const progressCount = onboardingProgress?.completedTasks?.length ?? 0;
+        const pct = Math.round((progressCount / 28) * 100);
+        return (
+          <button
+            onClick={onOpenGuide}
+            className="w-full bg-white border-2 border-gray-200 rounded-3xl p-5 mb-4 text-left shadow-sm hover:bg-gray-50 active:scale-95 transition-all duration-200"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xl">🏠</span>
+                  <span className="font-display font-bold text-gray-900">30-Day New Owner Guide</span>
+                </div>
+                <p className="text-xs text-gray-400 font-semibold">Singapore-specific onboarding checklist</p>
+              </div>
+              <span className="text-gray-400 text-xl">›</span>
+            </div>
+            {progressCount > 0 && (
+              <div className="mt-3">
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div className="h-1.5 rounded-full bg-[#4CAF78]" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{progressCount} / 28 tasks completed</p>
+              </div>
+            )}
+          </button>
+        );
+      })()}
 
       {/* Retake */}
       <button
