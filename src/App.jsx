@@ -1,67 +1,177 @@
 import { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc, deleteField } from 'firebase/firestore';
+import { db } from './firebase.js';
+import { useAuth } from './contexts/AuthContext.jsx';
+import LoginPage from './components/auth/LoginPage.jsx';
+import SignupPage from './components/auth/SignupPage.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import CardStack from './components/CardStack.jsx';
 import MyMatches from './components/MyMatches.jsx';
 import Profile from './components/Profile.jsx';
 import BottomNav from './components/BottomNav.jsx';
+import BreedGuide from './components/BreedGuide.jsx';
 import MatchModal from './components/MatchModal.jsx';
+import OwnerOnboarding from './components/OwnerOnboarding.jsx';
+import Community from './components/Community.jsx';
 import animalsData from './data/animalsData.js';
 import { sortAnimalsByScore, computeMatchScore } from './utils/matchingAlgorithm.js';
 
-function load(key, fallback) {
+// ── Local cache helpers (scoped per user) ────────────────────────────────────
+function cacheLoad(uid, key, fallback) {
   try {
-    const v = localStorage.getItem(key);
+    const v = localStorage.getItem(`pawmatch_${uid}_${key}`);
     return v ? JSON.parse(v) : fallback;
   } catch {
     return fallback;
   }
 }
 
+function cacheSave(uid, key, value) {
+  try {
+    localStorage.setItem(`pawmatch_${uid}_${key}`, JSON.stringify(value));
+  } catch { /* storage full — silently ignore */ }
+}
+
+function cacheClear(uid) {
+  ['profile', 'liked', 'passed'].forEach(k =>
+    localStorage.removeItem(`pawmatch_${uid}_${k}`)
+  );
+}
+
+// ── Firestore helpers ────────────────────────────────────────────────────────
+async function loadUserData(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) return { profile: null, likedAnimals: [], passedIds: [], onboardingProgress: { completedTasks: [] }, joinedCommunities: [] };
+  const data = snap.data();
+  return {
+    profile:             data.profile             ?? null,
+    likedAnimals:        data.likedAnimals        ?? [],
+    passedIds:           data.passedIds           ?? [],
+    onboardingProgress:  data.onboardingProgress  ?? { completedTasks: [] },
+    joinedCommunities:   data.joinedCommunities   ?? [],
+  };
+}
+
+async function saveProfile(uid, profile) {
+  await setDoc(doc(db, 'users', uid), { profile }, { merge: true });
+}
+
+async function saveLiked(uid, likedAnimals) {
+  await setDoc(doc(db, 'users', uid), { likedAnimals }, { merge: true });
+}
+
+async function savePassed(uid, passedIds) {
+  await setDoc(doc(db, 'users', uid), { passedIds }, { merge: true });
+}
+
+async function clearUserData(uid) {
+  await setDoc(
+    doc(db, 'users', uid),
+    { profile: deleteField(), likedAnimals: [], passedIds: [] },
+    { merge: true }
+  );
+}
+
+// ── Species filter config ────────────────────────────────────────────────────
 const SPECIES_FILTERS = [
   { value: 'all', label: 'All',  emoji: '🐾' },
   { value: 'dog', label: 'Dogs', emoji: '🐶' },
   { value: 'cat', label: 'Cats', emoji: '🐱' },
 ];
 
+// ── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [userProfile,  setUserProfile]  = useState(() => load('pawmatch_profile', null));
-  const [likedAnimals, setLikedAnimals] = useState(() => load('pawmatch_liked',   []));
-  const [passedIds,    setPassedIds]    = useState(() => load('pawmatch_passed',   []));
-  const [activeTab,    setActiveTab]    = useState('discover');
-  const [matchModal,   setMatchModal]   = useState(null);
-  const [speciesFilter, setSpeciesFilter] = useState('all');
+  const { currentUser, authLoading } = useAuth();
+
+  const [authView,      setAuthView]      = useState('login'); // 'login' | 'signup'
+  const [userProfile,   setUserProfile]   = useState(null);
+  const [likedAnimals,  setLikedAnimals]  = useState([]);
+  const [passedIds,     setPassedIds]     = useState([]);
+  const [activeTab,          setActiveTab]          = useState('discover');
+  const [matchModal,         setMatchModal]         = useState(null);
+  const [speciesFilter,      setSpeciesFilter]      = useState('all');
+  const [dataLoading,        setDataLoading]        = useState(false);
+  const [showOnboarding,     setShowOnboarding]     = useState(false);
+  const [onboardingProgress, setOnboardingProgress] = useState({ completedTasks: [] });
+  const [joinedCommunities,  setJoinedCommunities]  = useState([]);
+
+  // ── Load user data from Firestore on login ───────────────────────────────
+  useEffect(() => {
+    if (!currentUser) {
+      setUserProfile(null);
+      setLikedAnimals([]);
+      setPassedIds([]);
+      setActiveTab('discover');
+      setSpeciesFilter('all');
+      return;
+    }
+
+    const uid = currentUser.uid;
+
+    // Seed from local cache for instant render
+    setUserProfile(cacheLoad(uid, 'profile', null));
+    setLikedAnimals(cacheLoad(uid, 'liked', []));
+    setPassedIds(cacheLoad(uid, 'passed', []));
+
+    setDataLoading(true);
+    loadUserData(uid)
+      .then(({ profile, likedAnimals, passedIds, onboardingProgress, joinedCommunities }) => {
+        setUserProfile(profile);
+        setLikedAnimals(likedAnimals);
+        setPassedIds(passedIds);
+        setOnboardingProgress(onboardingProgress);
+        setJoinedCommunities(joinedCommunities);
+        cacheSave(uid, 'profile', profile);
+        cacheSave(uid, 'liked',   likedAnimals);
+        cacheSave(uid, 'passed',  passedIds);
+      })
+      .catch(console.error)
+      .finally(() => setDataLoading(false));
+  }, [currentUser]);
+
+  // ── Sync state → Firestore + cache (skip during initial load) ───────────
+  useEffect(() => {
+    if (!currentUser || dataLoading) return;
+    const uid = currentUser.uid;
+    saveProfile(uid, userProfile).catch(console.error);
+    cacheSave(uid, 'profile', userProfile);
+  }, [userProfile]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (userProfile) localStorage.setItem('pawmatch_profile', JSON.stringify(userProfile));
-    else localStorage.removeItem('pawmatch_profile');
-  }, [userProfile]);
+    if (!currentUser || dataLoading) return;
+    const uid = currentUser.uid;
+    saveLiked(uid, likedAnimals).catch(console.error);
+    cacheSave(uid, 'liked', likedAnimals);
+  }, [likedAnimals]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    localStorage.setItem('pawmatch_liked',  JSON.stringify(likedAnimals));
-  }, [likedAnimals]);
+    if (!currentUser || dataLoading) return;
+    const uid = currentUser.uid;
+    savePassed(uid, passedIds).catch(console.error);
+    cacheSave(uid, 'passed', passedIds);
+  }, [passedIds]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    localStorage.setItem('pawmatch_passed', JSON.stringify(passedIds));
-  }, [passedIds]);
+    if (!currentUser || dataLoading) return;
+    setDoc(doc(db, 'users', currentUser.uid), { joinedCommunities }, { merge: true }).catch(console.error);
+  }, [joinedCommunities]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sort animals by compatibility, strip already-swiped ones
+  // ── Filtered animals ─────────────────────────────────────────────────────
   const sortedAnimals    = userProfile ? sortAnimalsByScore(animalsData, userProfile) : animalsData;
   const swipedIds        = new Set([...likedAnimals.map(a => a.id), ...passedIds]);
   const availableAnimals = sortedAnimals.filter(a => !swipedIds.has(a.id));
 
-  // Apply HDB filter (HDB residents can only keep HDB-approved breeds)
   const hdbFiltered =
     userProfile?.livingSpace === 'hdb'
       ? availableAnimals.filter(a => a.hdbApproved)
       : availableAnimals;
 
-  // Apply species filter
   const filteredAnimals =
     speciesFilter === 'all'
       ? hdbFiltered
       : hdbFiltered.filter(a => a.species === speciesFilter);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleOnboardingComplete = (profile) => {
     setUserProfile(profile);
     setLikedAnimals([]);
@@ -78,7 +188,15 @@ export default function App() {
     setPassedIds(prev => [...prev, animal.id]);
   };
 
-  const handleRetakeQuiz = () => {
+  const handleRetakeQuiz = async () => {
+    if (currentUser) {
+      try {
+        await clearUserData(currentUser.uid);
+        cacheClear(currentUser.uid);
+      } catch (err) {
+        console.error('Failed to clear Firestore data:', err);
+      }
+    }
     setUserProfile(null);
     setLikedAnimals([]);
     setPassedIds([]);
@@ -87,12 +205,48 @@ export default function App() {
     setSpeciesFilter('all');
   };
 
-  // ── Onboarding ─────────────────────────────────────────────────────────────
+  // ── Avatar letter ─────────────────────────────────────────────────────────
+  const avatarLetter = currentUser?.displayName
+    ? currentUser.displayName[0].toUpperCase()
+    : currentUser?.email?.[0].toUpperCase() ?? '?';
+
+  // ── Auth loading splash ───────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-5xl animate-bounce inline-block">🐾</span>
+          <p className="text-[#FF6B35] font-bold mt-3 font-display text-lg">PawMatch</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Auth gate ─────────────────────────────────────────────────────────────
+  if (!currentUser) {
+    return authView === 'login'
+      ? <LoginPage  onSwitchToSignup={() => setAuthView('signup')} />
+      : <SignupPage onSwitchToLogin={()  => setAuthView('login')}  />;
+  }
+
+  // ── Firestore data loading ────────────────────────────────────────────────
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+        <div className="text-center">
+          <span className="text-5xl animate-bounce inline-block">🐾</span>
+          <p className="text-[#FF6B35] font-bold mt-3 font-display text-lg">Loading your profile…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
   if (!userProfile) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  // ── Main app ───────────────────────────────────────────────────────────────
+  // ── Main app ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen flex flex-col bg-[#FFF8F0] relative">
@@ -114,6 +268,10 @@ export default function App() {
                 {likedAnimals.length} ❤️
               </span>
             )}
+            {/* User avatar */}
+            <div className="w-8 h-8 rounded-full bg-[#FF6B35] flex items-center justify-center text-white text-xs font-black shadow-sm flex-shrink-0">
+              {avatarLetter}
+            </div>
           </div>
         </header>
 
@@ -125,7 +283,6 @@ export default function App() {
               <p className="text-xs text-gray-400 font-semibold mb-3">
                 Sorted by compatibility · {userProfile.mbti} type
               </p>
-              {/* Species filter tabs */}
               <div className="flex gap-1.5 bg-gray-100 p-1 rounded-2xl">
                 {SPECIES_FILTERS.map(f => (
                   <button
@@ -153,7 +310,21 @@ export default function App() {
           {activeTab === 'profile' && (
             <div>
               <h2 className="font-display text-lg font-bold text-gray-900">My Profile</h2>
-              <p className="text-xs text-gray-400 font-semibold">Your personality & lifestyle</p>
+              <p className="text-xs text-gray-400 font-semibold">
+                {currentUser.displayName || currentUser.email}
+              </p>
+            </div>
+          )}
+          {activeTab === 'guide' && (
+            <div>
+              <h2 className="font-display text-lg font-bold text-gray-900">Breed Guide</h2>
+              <p className="text-xs text-gray-400 font-semibold">Singapore's dogs — HDB &amp; beyond</p>
+            </div>
+          )}
+          {activeTab === 'community' && (
+            <div>
+              <h2 className="font-display text-lg font-bold text-gray-900">Community</h2>
+              <p className="text-xs text-gray-400 font-semibold">Connect with Singapore dog owners</p>
             </div>
           )}
         </div>
@@ -178,6 +349,16 @@ export default function App() {
             <Profile
               userProfile={userProfile}
               onRetakeQuiz={handleRetakeQuiz}
+              onOpenGuide={() => setShowOnboarding(true)}
+              onboardingProgress={onboardingProgress}
+            />
+          )}
+          {activeTab === 'guide' && <BreedGuide />}
+          {activeTab === 'community' && (
+            <Community
+              userProfile={userProfile}
+              joinedCommunities={joinedCommunities}
+              onJoinedChange={setJoinedCommunities}
             />
           )}
         </main>
@@ -197,6 +378,11 @@ export default function App() {
               setActiveTab('matches');
             }}
           />
+        )}
+
+        {/* ── 30-Day Owner Onboarding overlay ── */}
+        {showOnboarding && (
+          <OwnerOnboarding onClose={() => setShowOnboarding(false)} />
         )}
       </div>
     </div>

@@ -146,7 +146,7 @@ export default function Onboarding({ onComplete }) {
           >
             Start My Quiz →
           </button>
-          <p className="text-xs text-gray-400 mt-4">Takes about 2 minutes · No sign-up needed</p>
+          <p className="text-xs text-gray-400 mt-4">Takes about 2 minutes</p>
         </div>
       </div>
     );
