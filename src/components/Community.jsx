@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { COMMUNITIES, EVENTS, SHELTERS } from '../data/communityData.js';
 import CommunityGroup from './CommunityGroup.jsx';
@@ -51,9 +51,12 @@ function JoinedChip({ community, onTap }) {
 }
 
 // ── Event card ────────────────────────────────────────────────────────────────
-function EventCard({ event }) {
+function EventCard({ event, onTap }) {
   return (
-    <div className="flex-shrink-0 w-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
+    <button
+      onClick={onTap}
+      className="flex-shrink-0 w-56 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 text-left active:scale-95 transition-all hover:shadow-md"
+    >
       <div className="flex items-center gap-2 mb-2">
         <span className="bg-[#FF6B35] text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
           {event.dateShort}
@@ -62,12 +65,115 @@ function EventCard({ event }) {
       </div>
       <p className="font-display font-bold text-gray-900 text-sm leading-tight mb-1">{event.title}</p>
       <p className="text-[10px] text-gray-400 mb-2 leading-snug">📍 {event.location}</p>
-      <button
-        onClick={() => window.open(event.organizerUrl, '_blank', 'noopener,noreferrer')}
-        className="text-xs font-bold text-[#FF6B35] hover:underline active:scale-95 transition-all"
+      <span className="text-xs font-bold text-[#FF6B35]">View details →</span>
+    </button>
+  );
+}
+
+// ── Event detail sheet ────────────────────────────────────────────────────────
+function EventDetailSheet({ event, onClose }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 20);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.3s ease' }}
+        onClick={handleClose}
+      />
+      {/* Sheet */}
+      <div
+        className="relative w-full max-w-[430px] mx-auto bg-white rounded-t-3xl flex flex-col"
+        style={{
+          maxHeight: '88vh',
+          transform: visible ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
+        }}
       >
-        Find out more →
-      </button>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 pb-6">
+          {/* Date + organiser row */}
+          <div className="flex items-center gap-2 mb-3 mt-2">
+            <span className="bg-[#FF6B35] text-white text-xs font-extrabold px-3 py-1 rounded-full">
+              {event.date}
+            </span>
+            <span className="text-xs text-gray-500 font-semibold">{event.organizer}</span>
+          </div>
+
+          {/* Title */}
+          <h2 className="font-display font-bold text-gray-900 text-xl leading-tight mb-4">{event.title}</h2>
+
+          {/* Key info grid */}
+          <div className="bg-orange-50 rounded-2xl p-4 mb-4 flex flex-col gap-2.5">
+            <div className="flex items-start gap-3">
+              <span className="text-base w-5 flex-shrink-0">🕐</span>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Time</p>
+                <p className="text-sm font-semibold text-gray-800">{event.time}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-base w-5 flex-shrink-0">💰</span>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Price</p>
+                <p className="text-sm font-semibold text-gray-800">{event.price}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-base w-5 flex-shrink-0">📍</span>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Location</p>
+                <p className="text-sm font-semibold text-gray-800">{event.location}</p>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{event.locationDetail}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* What to expect */}
+          <div className="mb-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">What to expect</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{event.details}</p>
+          </div>
+
+          {/* Tags */}
+          {event.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {event.tags.map(tag => (
+                <span
+                  key={tag}
+                  className="text-xs font-semibold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* CTA button */}
+          <button
+            onClick={() => window.open(event.organizerUrl, '_blank', 'noopener,noreferrer')}
+            className="w-full py-4 rounded-2xl bg-[#FF6B35] text-white font-bold text-base shadow-sm active:opacity-80 transition-opacity"
+          >
+            Visit {event.organizer} Website →
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -118,8 +224,9 @@ function SectionHeader({ title, subtitle }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Community({ userProfile, joinedCommunities, onJoinedChange }) {
   const { currentUser } = useAuth();
-  const [filter,        setFilter]        = useState('all');
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [filter,         setFilter]         = useState('all');
+  const [selectedGroup,  setSelectedGroup]  = useState(null);
+  const [selectedEvent,  setSelectedEvent]  = useState(null);
 
   const filteredCommunities = filter === 'all'
     ? COMMUNITIES
@@ -204,7 +311,7 @@ export default function Community({ userProfile, joinedCommunities, onJoinedChan
               style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {EVENTS.map(event => (
-                <EventCard key={event.id} event={event} />
+                <EventCard key={event.id} event={event} onTap={() => setSelectedEvent(event)} />
               ))}
             </div>
           </section>
@@ -219,6 +326,11 @@ export default function Community({ userProfile, joinedCommunities, onJoinedChan
 
         </div>
       </div>
+
+      {/* Event detail sheet */}
+      {selectedEvent && (
+        <EventDetailSheet event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      )}
 
       {/* CommunityGroup overlay */}
       {selectedGroup && (
